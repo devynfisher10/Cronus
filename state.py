@@ -143,6 +143,91 @@ class AerialPracticeState(StateSetter):
 
 
 
+class TurtleState(StateSetter):
+
+    def __init__(self, reset_to_max_boost=True):
+        """
+        AerialPracticeState constructor.
+        :param reset_to_max_boost: Boolean indicating whether the cars will start each episode with 100 boost or keep from last episode
+        """
+        super().__init__()
+        self.team_turn = 0  # swap every reset which car is making the aerial play
+        self.reset_to_max_boost = reset_to_max_boost
+
+    def reset(self, state_wrapper: StateWrapper):
+        """
+        Modifies the StateWrapper to set a new aerial play
+        :param state_wrapper: StateWrapper object to be modified with desired state values.
+        """
+        self._reset_ball_and_cars(state_wrapper, self.team_turn, self.reset_to_max_boost)
+
+        # which team will make the next aerial play
+        self.team_turn = (self.team_turn + 1) % 2
+
+    def _reset_ball_and_cars(self, state_wrapper: StateWrapper, team_turn, reset_to_max_boost):
+        """
+        Function to set a new ball in the air towards a goal
+        :param state_wrapper: StateWrapper object to be modified.
+        :param team_turn: team who's making the aerial play
+        :param reset_to_max_boost: Boolean indicating whether the cars will start each episode with 100 boost or keep from last episode
+        """
+
+        pos, lin_vel, ang_vel = self._get_ball_parameters(team_turn)
+        state_wrapper.ball.set_pos(pos[0], pos[1], pos[2])
+        state_wrapper.ball.set_lin_vel(lin_vel[0], lin_vel[1], lin_vel[2])
+        state_wrapper.ball.set_ang_vel(ang_vel[0], ang_vel[1], ang_vel[2])
+
+        # reset cars relative to the ball
+        first_set = False
+        for car in state_wrapper.cars:
+            # set random position and rotation for all cars based on pre-determined ranges
+
+            if car.team_num == team_turn and not first_set:
+                car.set_pos(x=1000, y=4000,  z=40.24)
+                car.set_lin_vel(0,0,0)
+                first_set = True
+            else:
+                car.set_pos(x=-1000, y=-4000,  z=40.24)
+                car.set_lin_vel(0,0,0)
+
+            car.boost = 100
+
+            car.quaternion = (1, 0, 0, -1)
+
+            car.set_rot(0, 0, 0)
+
+
+    def _get_ball_parameters(self, team_turn):
+        """
+        Function to set a new ball up for an aerial play
+        
+        :param team_turn: team who's making the aerial play
+        """
+
+        INVERT_IF_BLUE = (-1 if team_turn == 0 else 1)  # invert shot for blue
+
+        # set positional values
+        x_pos = random.uniform(GOAL_X_MIN, GOAL_X_MAX)
+        y_pos = 1000 * random.uniform(-.1, 1) * INVERT_IF_BLUE
+        z_pos = CEILING_Z * random.uniform(.5, 1)
+        pos = np.array([x_pos, y_pos, z_pos])
+
+        # set lin velocity values
+        x_vel_randomizer = (random.uniform(-.5, .5))
+        y_vel_randomizer = (random.uniform(-.1, .3))
+        z_vel_randomizer = (random.uniform(.1, 1))
+
+        x_vel = (200 * x_vel_randomizer)
+        y_vel = (200 * y_vel_randomizer * INVERT_IF_BLUE)
+        z_vel = (600 * z_vel_randomizer)
+        lin_vel = np.array([x_vel, y_vel, z_vel])
+
+
+        ang_vel = np.array([0, 0, 0])
+
+        return pos, lin_vel, ang_vel
+
+
 # setting initial probabilities for each state here. Will update over time as increase prob of complex states for curriculum learning.
 class CronusStateSetter(StateSetter):
     def __init__(
@@ -158,6 +243,7 @@ class CronusStateSetter(StateSetter):
 
         super().__init__()
 
+
         self.setters = [
             GoaliePracticeState(),
             WallPracticeState(),
@@ -167,6 +253,14 @@ class CronusStateSetter(StateSetter):
             AerialPracticeState(),
         ]
         self.probs = np.array([goalie_prob, wall_prob, default_prob, kickofflike_prob, random_prob, aerial_prob])
+
+        """
+        self.setters = [
+            TurtleState(),
+        ]
+        self.probs = np.array([1])
+        """
+
         assert self.probs.sum() == 1, "Probabilities must sum to 1"
 
     def reset(self, state_wrapper: StateWrapper):

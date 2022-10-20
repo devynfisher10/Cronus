@@ -5,10 +5,13 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import VecMonitor, VecNormalize, VecCheckNan
 from stable_baselines3.ppo import MlpPolicy
-from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
+
+
+#from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
+from rlgym.utils.obs_builders import AdvancedObs
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
 
-# using Leaky Relu activation function and defining network shape
+# using Leaky Relu activation function
 from torch.nn import LeakyReLU
 
 from rewards import CronusRewards
@@ -23,14 +26,17 @@ if __name__ == '__main__':  # Required for multiprocessing
     # initial parameters, will update over the course of learning to increase batch size and comment iterations
     fps = 120 / frame_skip
     gamma = np.exp(np.log(0.5) / (fps * half_life_seconds))  
+    # for printing fast results instead of 1_000_000
     target_steps = 1_000_000
     agents_per_match = 2
-    # number of instances that maximizes fps on my system
+    # 7 is number of instances that maximizes fps on my system
     num_instances=7
     steps = target_steps // (num_instances * agents_per_match) #making sure the experience counts line up properly
-    # v0 batch size = 10,000
-    batch_size = 10_000
+    # v0.1 batch size = 10,000, v0.2 batch_size = 100,000 for fps gain
+    batch_size = 100_000
+    loading_model=False #check that loading model instead of starting from scratch
     print(f"fps={fps}, gamma={gamma})")
+
 
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
@@ -40,9 +46,9 @@ if __name__ == '__main__':  # Required for multiprocessing
             reward_function=CronusRewards(),
             spawn_opponents=True,
             terminal_conditions=[CronusTerminalCondition()],
-            obs_builder=AdvancedStacker(4),  
+            obs_builder=AdvancedObs(),  
             state_setter=CronusStateSetter(),  
-            action_parser=LookupAction()
+            action_parser=LookupAction(),
         )
 
     # creating env and force paging 
@@ -53,6 +59,7 @@ if __name__ == '__main__':  # Required for multiprocessing
 
     # we try loading existing model and if does not exist then we create new model
     try:
+        assert loading_model
         model=PPO.load(
             "models/exit_save.zip",
             env,
@@ -66,15 +73,15 @@ if __name__ == '__main__':  # Required for multiprocessing
         
         policy_kwargs = dict(
             activation_fn=LeakyReLU,
-            net_arch=[512, 512, dict(pi=[512,256,256], vf=[512, 256, 256])]
+            net_arch=[512, dict(pi=[256,256], vf=[256, 256, 256])]
             
          )
         model = PPO(
             MlpPolicy,
             env,
-            n_epochs=25,                 # PPO calls for multiple epochs
+            n_epochs=10,                 # had to drop epochs for fps gain, v0.1=30, v0.2=10
             policy_kwargs=policy_kwargs,
-            learning_rate=1e-4,          # Around this is fairly common for PPO
+            learning_rate=5e-5,          
             ent_coef=0.01,               # From PPO Atari
             vf_coef=1.,                  # From PPO Atari
             gamma=gamma,                 # Gamma as calculated using half-life
@@ -89,11 +96,12 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Save model every so often
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
-    callback = CheckpointCallback(round(100_000 / env.num_envs), save_path="models", name_prefix="rl_model")
+    # 100,000 for fast results instead of 500,000
+    callback = CheckpointCallback(round(500_000 / env.num_envs), save_path="models", name_prefix="rl_model")
 
     try:
         while True:
-            model.learn(25_000_000, callback=callback, reset_num_timesteps=False)
+            model.learn(40_000_000, callback=callback, reset_num_timesteps=False)
             model.save("models/exit_save")
             model.save("mmr_models/" + str(model.num_timesteps))
     

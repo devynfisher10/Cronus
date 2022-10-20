@@ -50,36 +50,61 @@ class MaintainVel(RewardFunction):
 
         return reward
 
+class BadTurtle(RewardFunction):
+    """Negative reward for being on the ground on a part of the car that is not the wheels"""
+    def __init__(self):
+        pass
+
+    def reset(self, initial_state: GameState):
+        pass
+
+    def get_reward(
+        self, player: PlayerData, state: GameState, previous_action: np.ndarray
+    ) -> float:
+
+        car_height = player.car_data.position[2] 
+        # reward is negative, because turtling is not generally useful
+        # car height between on wheels resting value and slightly above turtling resting value and z portion of vector normal to car indicates car is upside down
+        if (car_height> 20.0) and (car_height<=50.0) and (not player.on_ground) and (player.car_data.up()[2] < 0):
+            reward = -1.0
+        else:
+            reward=0
+
+        return reward
+
 
 class CronusRewards(RewardFunction):
     def __init__(self):
         super().__init__()
         # defining initial event reward weights, will update over time for curriculum learning and comment iterations
-        self.goal_weight = 10
-        self.demo_weight = 4
-        self.boost_weight = 2
-        self.save_weight = 2
-        self.shot_weight=1
+        # v0.1
+        self.goal_weight = 0#10
+        self.demo_weight = 0#4
+        self.boost_weight = 0#2
+        self.shot_weight=0#1
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
-        self.event_weight = 1
-        self.touch_vel_weight = .5
-        self.align_weight = .25
-        self.vel_ball_weight = .05
-        self.vel_weight = .025
-        self.maintain_vel_weight = .1
+        # v0.1
+        self.event_weight = 0#1
+        self.touch_vel_weight = 0#.5
+        self.align_weight = 0#.25
+        self.vel_ball_weight = 0#.05
+        self.vel_weight = 0#.025
+        self.maintain_vel_weight = 0#.1
+        self.bad_turtle_weight = 1#.025
 
         self.reward = CombinedReward(
             (
-             EventReward(goal=self.goal_weight, concede=-self.goal_weight, demo=self.demo_weight, boost_pickup=self.boost_weight, save=self.save_weight, shot=self.shot_weight),  # 1.0
+             EventReward(goal=self.goal_weight, concede=-self.goal_weight, demo=self.demo_weight, boost_pickup=self.boost_weight, shot=self.shot_weight),  
              TouchVelChange(),
              AlignBallGoal(),
              VelocityBallToGoalReward(),
              VelocityReward(),
-             MaintainVel()
+             MaintainVel(),
+             BadTurtle(),
 
              ),
-            (self.event_weight, self.touch_vel_weight, self.align_weight, self.vel_ball_weight, self.vel_weight, self.maintain_vel_weight))
+            (self.event_weight, self.touch_vel_weight, self.align_weight, self.vel_ball_weight, self.vel_weight, self.maintain_vel_weight, self.bad_turtle_weight))
 
     def reset(self, initial_state: GameState) -> None:
         self.reward.reset(initial_state)
