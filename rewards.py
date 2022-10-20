@@ -78,20 +78,20 @@ class CronusRewards(RewardFunction):
         super().__init__()
         # defining initial event reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
-        self.goal_weight = 0#10
-        self.demo_weight = 0#4
-        self.boost_weight = 0#2
-        self.shot_weight=0#1
+        self.goal_weight = 10
+        self.demo_weight = 4
+        self.boost_weight = 2
+        self.shot_weight=1
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
-        self.event_weight = 0#1
-        self.touch_vel_weight = 0#.5
-        self.align_weight = 0#.25
-        self.vel_ball_weight = 0#.05
-        self.vel_weight = 0#.025
-        self.maintain_vel_weight = 0#.1
-        self.bad_turtle_weight = 1#.025
+        self.event_weight = 1
+        self.touch_vel_weight = .5
+        self.align_weight = .25
+        self.vel_ball_weight = .05
+        self.vel_weight = .025
+        self.maintain_vel_weight = .1
+        self.bad_turtle_weight = .5
 
         self.reward = CombinedReward(
             (
