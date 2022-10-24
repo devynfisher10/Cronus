@@ -80,22 +80,23 @@ class CronusRewards(RewardFunction):
         # v0.1
         self.goal_weight = 10
         self.demo_weight = 4
-        self.boost_weight = 2
+        self.boost_weight = .025 # from 1 from 2
         self.shot_weight=1
+        self.touch_weight = 4 # from 2 from 0
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         self.event_weight = 1
-        self.touch_vel_weight = .5
-        self.align_weight = .25
+        self.touch_vel_weight = .75 # from .5
+        self.align_weight = 0 # from.25 around 60 mil steps 
         self.vel_ball_weight = .05
-        self.vel_weight = .025
-        self.maintain_vel_weight = .1
-        self.bad_turtle_weight = .5
+        self.vel_weight = .0025 # from.02 # from .01 # from .025
+        self.maintain_vel_weight = 0 # from .015 # from .1 from .025
+        self.bad_turtle_weight = .25 # from .5
 
         self.reward = CombinedReward(
             (
-             EventReward(goal=self.goal_weight, concede=-self.goal_weight, demo=self.demo_weight, boost_pickup=self.boost_weight, shot=self.shot_weight),  
+             EventReward(goal=self.goal_weight, concede=-self.goal_weight, demo=self.demo_weight, boost_pickup=self.boost_weight, shot=self.shot_weight, touch=self.touch_weight),  
              TouchVelChange(),
              AlignBallGoal(),
              VelocityBallToGoalReward(),

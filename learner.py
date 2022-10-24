@@ -34,7 +34,8 @@ if __name__ == '__main__':  # Required for multiprocessing
     steps = target_steps // (num_instances * agents_per_match) #making sure the experience counts line up properly
     # v0.1 batch size = 10,000, v0.2 batch_size = 100,000 for fps gain
     batch_size = 100_000
-    loading_model=False #check that loading model instead of starting from scratch
+    loading_model=True #check that loading model instead of starting from scratch
+    model_to_load = "exit_save.zip" #exit_save.zip
     print(f"fps={fps}, gamma={gamma})")
 
 
@@ -61,7 +62,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     try:
         assert loading_model
         model=PPO.load(
-            "models/exit_save.zip",
+            f"models/{model_to_load}",
             env,
             device="cpu",
             custom_objects={"n_envs": env.num_envs}, #automatically adjusts to users changing instance count, may encounter shaping error otherwise
@@ -97,11 +98,11 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
     # 100,000 for fast results instead of 500,000
-    callback = CheckpointCallback(round(500_000 / env.num_envs), save_path="models", name_prefix="rl_model")
+    callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model")
 
     try:
         while True:
-            model.learn(40_000_000, callback=callback, reset_num_timesteps=False)
+            model.learn(100_000_000, callback=callback, reset_num_timesteps=False, tb_log_name="PPO_1")
             model.save("models/exit_save")
             model.save("mmr_models/" + str(model.num_timesteps))
     

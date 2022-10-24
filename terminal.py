@@ -11,7 +11,7 @@ class CronusTerminalCondition(TerminalCondition):
     def __init__(self, tick_skip=8):
         super().__init__()
         fps = 120 / tick_skip
-        self.no_touch = NoTouchTimeoutCondition(round(60 * 1 * fps)) # 1 min max
+        self.no_touch = NoTouchTimeoutCondition(round(60 * 5 * fps)) # now 5 min max, was 1 min max
         self.goal_scored = GoalScoredCondition()
         self.timeout = TimeoutCondition(round(60 * 7 * fps))  # 7 min max
 
