@@ -2,7 +2,7 @@
 import numpy as np
 from rlgym.envs import Match
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 from stable_baselines3.common.vec_env import VecMonitor, VecNormalize, VecCheckNan
 from stable_baselines3.ppo import MlpPolicy
 
@@ -10,6 +10,15 @@ from stable_baselines3.ppo import MlpPolicy
 #from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
 from rlgym.utils.obs_builders import AdvancedObs
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
+from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
+
+
+from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogReward
+from rlgym.utils.reward_functions.common_rewards.ball_goal_rewards import VelocityBallToGoalReward
+from rlgym.utils.reward_functions.common_rewards.misc_rewards import EventReward, VelocityReward
+from rewards import TouchVelChange, BadTurtle,JumpTouchReward,DoubleTapReward
+
+
 
 # using Leaky Relu activation function
 from torch.nn import LeakyReLU
@@ -41,10 +50,39 @@ if __name__ == '__main__':  # Required for multiprocessing
 
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
+        goal_weight = 10
+        demo_weight = 4
+        boost_weight = .025 # from 1 from 2
+        shot_weight=1
+        touch_weight = 4 # from 2 from 0
+
+        # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
+        # v0.1
+        event_weight = 1
+        touch_vel_weight = .75 # from .5
+        vel_ball_weight = .05
+        vel_weight = .0025 # from.02 # from .01 # from .025
+        maintain_vel_weight = 0 # from .015 # from .1 from .025
+        bad_turtle_weight = .25 # from .5
+        jump_touch_weight = .5 # from 0
+        double_tap_weight = 1 # from .5
         return Match(
             team_size=1,  # 1v1 bot only
             tick_skip=frame_skip,
-            reward_function=CronusRewards(),
+            reward_function=SB3CombinedLogReward(
+                (
+                 EventReward(goal=goal_weight, concede=-goal_weight, demo=demo_weight, boost_pickup=boost_weight, shot=shot_weight, touch=touch_weight),  
+                 TouchVelChange(),
+                 VelocityBallToGoalReward(),
+                 VelocityReward(),
+                 BadTurtle(),
+                 JumpTouchReward(),
+                 DoubleTapReward()
+
+                 ),
+                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, bad_turtle_weight, jump_touch_weight, double_tap_weight),
+                "logs"
+            ),
             spawn_opponents=True,
             terminal_conditions=[CronusTerminalCondition()],
             obs_builder=AdvancedObs(),  
@@ -53,7 +91,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         )
 
     # creating env and force paging 
-    env = SB3MultipleInstanceEnv(get_match, num_instances, wait_time=60, force_paging=True)            
+    env = SB3MultipleInstanceEnv(get_match, num_instances, wait_time=80, force_paging=True)            
     env = VecCheckNan(env)                                # Optional
     env = VecMonitor(env)                                 # Recommended, logs mean reward and ep_len to Tensorboard
     env = VecNormalize(env, norm_obs=False, gamma=gamma)  # Highly recommended, normalizes rewards
@@ -98,11 +136,17 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
     # 100,000 for fast results instead of 500,000
-    callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model")
+    #reward_list=['goal', 'concede', 'demo', 'boost', 'shot', 'touch', 'event', 'touch_vel', 'align','vel_ball','vel','bad_turtle','jump_touch','double_tap']
+    reward_list=['event', 'touch_vel','vel_ball','vel','bad_turtle','jump_touch','double_tap']
 
+    save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model")
+    reward_callback = SB3CombinedLogRewardCallback(reward_list, 'logs')
+    callbacks = CallbackList([save_callback, reward_callback])
     try:
         while True:
-            model.learn(100_000_000, callback=callback, reset_num_timesteps=False, tb_log_name="PPO_1")
+            model.learn(100_000_000, callback=callbacks, reset_num_timesteps=False, tb_log_name="PPO_1")
+            #model.learn(100_000_000, callback=save_callback, reset_num_timesteps=False, tb_log_name="PPO_1")
+
             model.save("models/exit_save")
             model.save("mmr_models/" + str(model.num_timesteps))
     
@@ -110,3 +154,6 @@ if __name__ == '__main__':  # Required for multiprocessing
         model.save("models/exit_save")
         model.save("mmr_models/" + str(model.num_timesteps))
         print("Exiting training")
+
+
+        # C:\Users\devyn\anaconda3\Lib\site-packages
