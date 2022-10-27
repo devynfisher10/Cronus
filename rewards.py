@@ -100,7 +100,7 @@ class DoubleTapReward(RewardFunction):
         self.first_air_touch = False
         self.second_air_touch = False
         self.min_height = BALL_RADIUS + 5
-        self.min_backboard_height = 250 # top of goal is 642.775
+        self.min_backboard_height = 500 # top of goal is 642.775, changed from 250
         self.num_steps = 0
 
     def reset(self, initial_state: GameState):
