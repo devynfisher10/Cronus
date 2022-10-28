@@ -101,6 +101,7 @@ class DoubleTapReward(RewardFunction):
         self.second_air_touch = False
         self.min_height = BALL_RADIUS + 5
         self.min_backboard_height = 500 # top of goal is 642.775, changed from 250
+        self.min_car_dist_from_backboard = BALL_RADIUS*2
         self.num_steps = 0
 
     def reset(self, initial_state: GameState):
@@ -128,18 +129,40 @@ class DoubleTapReward(RewardFunction):
             self.off_backboard=True
 
         # if make air touch, set first_air_touch value. Only set this value if has not yet touched the backboard 
-        if not self.off_backboard and player.ball_touched and ball_position[2] >= self.min_height:
-            self.first_air_touch=True
+        if (not self.off_backboard) and (player.ball_touched) and (ball_position[2] >= self.min_height):
+            # adding checks to make sure car is a min distance from wall when making touches to prevent dribbling on wall
+            if (player.team_num == ORANGE_TEAM) and (abs(-1.0*BACK_WALL_Y - player.car_data.position[1]) >= self.min_car_dist_from_backboard):
+                self.first_air_touch=True
+            elif (player.team_num == BLUE_TEAM) and (abs(1.0*BACK_WALL_Y - player.car_data.position[1]) >= self.min_car_dist_from_backboard):
+                self.first_air_touch=True
+
 
         # if make air touch, set second_air_touch value. Only set this value if has already touched the backboard 
         if self.off_backboard and player.ball_touched and ball_position[2] >= self.min_height:
-            self.second_air_touch=True
+            # adding checks to make sure car is a min distance from wall when making touches to prevent dribbling on wall
+            if (player.team_num == ORANGE_TEAM) and (abs(-1.0*BACK_WALL_Y - player.car_data.position[1]) >= self.min_car_dist_from_backboard):
+                self.second_air_touch=True
+            elif (player.team_num == BLUE_TEAM) and (abs(1.0*BACK_WALL_Y - player.car_data.position[1]) >= self.min_car_dist_from_backboard):
+                self.second_air_touch=True
 
         if self.off_backboard and self.second_air_touch and self.num_steps < 5:
-            reward=1
-            # 5x reward if get full double tap instead of just backboard read
-            if self.first_air_touch:
-                reward = 5
+            if player.team_num == BLUE_TEAM:
+                objective = np.array(ORANGE_GOAL_BACK)
+            else:
+                objective = np.array(BLUE_GOAL_BACK)
+            vel = state.ball.linear_velocity
+            pos_diff = objective - state.ball.position
+            # Regular component velocity
+            norm_pos_diff = pos_diff / np.linalg.norm(pos_diff)
+            norm_vel = vel / BALL_MAX_SPEED
+            # only care about going towards back of net in x, y plane. z coordinate can vary.
+            dot = float(norm_pos_diff[0]*norm_vel[0] + norm_pos_diff[1]*norm_vel[1])
+            # check to see if velocity of ball towards goal is positive after final touch, only give reward if true
+            if dot > 0:
+                reward=1
+                # 5x reward if get full double tap instead of just backboard read
+                if self.first_air_touch:
+                    reward = 5
             # increment steps to make sure only rewards for initial hit + follow up
             self.num_steps += 1
 

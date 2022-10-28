@@ -53,17 +53,17 @@ if __name__ == '__main__':  # Required for multiprocessing
         goal_weight = 10
         demo_weight = 4
         boost_weight = .025 # from 1 from 2
-        shot_weight=1
-        touch_weight = 2.5 # from 4 at 300 mil # from 2 from 0
+        shot_weight=.5 # from 1 at 400 mil
+        touch_weight = 2 # from 2.5 at 400 mil from 4 at 300 mil # from 2 from 0
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 6 # from 3 at 300 mil # from .75 from .5
+        touch_vel_weight = 9 # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
         vel_ball_weight = .05
         vel_weight = .001 # from .0025 from .02 # from .01 # from .025
         bad_turtle_weight = .25 # from .5
-        jump_touch_weight = 10 # from .5 at 300 mil # from 0
+        jump_touch_weight = 20 # from 10 at 400 mil from .5 at 300 mil # from 0
         double_tap_weight = 1 # from .5
         return Match(
             team_size=1,  # 1v1 bot only
