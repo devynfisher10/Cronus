@@ -101,14 +101,16 @@ class DoubleTapReward(RewardFunction):
         self.second_air_touch = False
         self.min_height = BALL_RADIUS + 5
         self.min_backboard_height = 500 # top of goal is 642.775, changed from 250
-        self.min_car_dist_from_backboard = BALL_RADIUS*2
+        self.min_car_dist_from_backboard = BALL_RADIUS*6 # from 2 at 550 mil
         self.num_steps = 0
+        self.prev_ball_vel = 0
 
     def reset(self, initial_state: GameState):
         self.off_backboard = False
         self.first_air_touch = False
         self.second_air_touch = False
         self.num_steps = 0
+        self.prev_ball_vel = 0
 
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
@@ -124,8 +126,8 @@ class DoubleTapReward(RewardFunction):
 
         # need to account for order, only reward for backboard -> air touch not other way around otherwise that just rewards hitting ball into backboard
 
-        # if ball hits backboard, set off_backboard value. Requires height to be in air
-        if (ball_position[2] >= self.min_backboard_height) and (ball_position[1] >= BACK_WALL_Y - BALL_RADIUS - 10):
+        # if ball hits backboard, and previous ball velocity was mostly towards the backboard, set off_backboard value. Requires height to be in air
+        if (ball_position[2] >= self.min_backboard_height) and (abs(self.prev_ball_vel[1]) > abs(self.prev_ball_vel[0]) + (abs(self.prev_ball_vel[2]))) and (ball_position[1] >= BACK_WALL_Y - BALL_RADIUS - 10):
             self.off_backboard=True
 
         # if make air touch, set first_air_touch value. Only set this value if has not yet touched the backboard 
@@ -154,11 +156,11 @@ class DoubleTapReward(RewardFunction):
             pos_diff = objective - state.ball.position
             # Regular component velocity
             norm_pos_diff = pos_diff / np.linalg.norm(pos_diff)
-            norm_vel = vel / BALL_MAX_SPEED
+            norm_vel = vel / np.linalg.norm(vel)
             # only care about going towards back of net in x, y plane. z coordinate can vary.
             dot = float(norm_pos_diff[0]*norm_vel[0] + norm_pos_diff[1]*norm_vel[1])
             # check to see if velocity of ball towards goal is positive after final touch, only give reward if true
-            if dot > 0:
+            if dot > .5:
                 reward=1
                 # 5x reward if get full double tap instead of just backboard read
                 if self.first_air_touch:
@@ -173,6 +175,7 @@ class DoubleTapReward(RewardFunction):
             self.second_air_touch=False
             self.off_backboard=False
  
+        self.prev_ball_vel = state.ball.linear_velocity
 
         return reward
 
