@@ -103,14 +103,14 @@ class DoubleTapReward(RewardFunction):
         self.min_backboard_height = 500 # top of goal is 642.775, changed from 250
         self.min_car_dist_from_backboard = BALL_RADIUS*6 # from 2 at 550 mil
         self.num_steps = 0
-        self.prev_ball_vel = 0
+        self.prev_ball_vel = np.zeros(3)
 
     def reset(self, initial_state: GameState):
         self.off_backboard = False
         self.first_air_touch = False
         self.second_air_touch = False
         self.num_steps = 0
-        self.prev_ball_vel = 0
+        self.prev_ball_vel = np.zeros(3)
 
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
