@@ -16,7 +16,7 @@ from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
 from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogReward
 from rlgym.utils.reward_functions.common_rewards.ball_goal_rewards import VelocityBallToGoalReward
 from rlgym.utils.reward_functions.common_rewards.misc_rewards import EventReward, VelocityReward
-from rewards import TouchVelChange, BadTurtle,JumpTouchReward,DoubleTapReward
+from rewards import TouchVelChange, BadTurtle,JumpTouchReward,DoubleTapReward, AirDribbleReward
 
 
 
@@ -53,18 +53,19 @@ if __name__ == '__main__':  # Required for multiprocessing
         goal_weight = 15 # from 10 at 550 mil
         demo_weight = 3 # from 4 at 610 mil
         boost_weight = .1 # from .025 at 550 mil # from 1 from 2
-        shot_weight=.05 # from .25 at 610 mil # from.5 at 550 mil # from 1 at 400 mil
-        touch_weight = .2 # from 1 at 610 mil # from 2 at 550 mil # from 2.5 at 400 mil from 4 at 300 mil # from 2 from 0
+        shot_weight = 0 # from .05 at 710 mil # from .25 at 610 mil # from.5 at 550 mil # from 1 at 400 mil
+        touch_weight = .1 # from .2 at 900 mil # from 1 at 610 mil # from 2 at 550 mil # from 2.5 at 400 mil from 4 at 300 mil # from 2 from 0
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 15 # from 9 at 550 mil # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
+        touch_vel_weight = 10 # from 15 at 710 mil # from 9 at 550 mil # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
         vel_ball_weight = .05
         vel_weight = .002 # from .001 # from .0025 from .02 # from .01 # from .025
         bad_turtle_weight = .25 # from .5
-        jump_touch_weight = 40 # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
+        jump_touch_weight = 15 # from 40 at 710 mil # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
         double_tap_weight = 1 # from .5
+        air_dribble_weight = 1
         return Match(
             team_size=1,  # 1v1 bot only
             tick_skip=frame_skip,
@@ -76,10 +77,10 @@ if __name__ == '__main__':  # Required for multiprocessing
                  VelocityReward(),
                  BadTurtle(),
                  JumpTouchReward(),
-                 DoubleTapReward()
-
+                 DoubleTapReward(),
+                 AirDribbleReward(),
                  ),
-                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, bad_turtle_weight, jump_touch_weight, double_tap_weight),
+                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, bad_turtle_weight, jump_touch_weight, double_tap_weight, air_dribble_weight),
                 "logs"
             ),
             spawn_opponents=True,
@@ -136,7 +137,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     # This saves to specified folder with a specified name
     # 100,000 for fast results instead of 500,000
     #reward_list=['goal', 'concede', 'demo', 'boost', 'shot', 'touch', 'event', 'touch_vel', 'align','vel_ball','vel','bad_turtle','jump_touch','double_tap']
-    reward_list=['event', 'touch_vel','vel_ball','vel','bad_turtle','jump_touch','double_tap']
+    reward_list=['event', 'touch_vel','vel_ball','vel','bad_turtle','jump_touch','double_tap', 'air_dribble']
 
     save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model")
     reward_callback = SB3CombinedLogRewardCallback(reward_list, 'logs')

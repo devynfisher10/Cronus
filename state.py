@@ -233,10 +233,10 @@ class CronusStateSetter(StateSetter):
     def __init__(
             self, *,
             goalie_prob=0.0, 
-            wall_prob=0.15,
+            wall_prob=0.25,
             default_prob=.2,
-            kickofflike_prob=0.15,
-            random_prob=.4,
+            kickofflike_prob=0.1,
+            random_prob=.35,
             aerial_prob=.1
     ):
 
@@ -246,7 +246,7 @@ class CronusStateSetter(StateSetter):
 
         self.setters = [
             GoaliePracticeState(),
-            WallPracticeState(),
+            WallPracticeState(air_dribble_odds=7/10, backboard_roll_odds=2/10, side_high_odds=1/10),
             DefaultState(),
             KickoffLikeSetter(),
             RandomState(),

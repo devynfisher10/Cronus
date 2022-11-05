@@ -156,7 +156,10 @@ class DoubleTapReward(RewardFunction):
             pos_diff = objective - state.ball.position
             # Regular component velocity
             norm_pos_diff = pos_diff / np.linalg.norm(pos_diff)
-            norm_vel = vel / np.linalg.norm(vel)
+            if np.linalg.norm(vel) > 0:
+                norm_vel = vel / np.linalg.norm(vel)
+            else:
+                norm_vel = vel
             # only care about going towards back of net in x, y plane. z coordinate can vary.
             dot = float(norm_pos_diff[0]*norm_vel[0] + norm_pos_diff[1]*norm_vel[1])
             # check to see if velocity of ball towards goal is positive after final touch, only give reward if true
@@ -176,6 +179,118 @@ class DoubleTapReward(RewardFunction):
             self.off_backboard=False
  
         self.prev_ball_vel = state.ball.linear_velocity
+
+        return reward
+
+
+
+class AirDribbleReward(RewardFunction):
+    """Class to reward agent for air dribbles. Gets progressively rewarded for behavior closer and closer to ideal air dribble behavior."""
+    def __init__(self):
+        # off_backboard and air_touch vars initialized to False. Set to true when each event occurrs, set back to false when ball touches ground
+        self.wall_touch = False
+        self.off_sidewall = False
+        self.towards_ball = False
+        self.first_air_touch = False
+        self.second_air_touch = False
+        self.min_wall_touch_height = 100
+        self.min_air_dribble_height = 500 # top of goal is 642.775
+        self.min_pos_diff = 350
+        self.min_vel_diff = 400
+        self.num_steps = 0
+        self.max_height = 2044-92.75
+        self.num_steps = 0
+
+
+    def reset(self, initial_state: GameState):
+        self.wall_touch = False
+        self.off_sidewall = False
+        self.towards_ball = False
+        self.first_air_touch = False
+        self.second_air_touch = False
+        self.num_steps = 0
+        self.num_steps = 0
+
+    def get_reward(
+        self, player: PlayerData, state: GameState, previous_action: np.ndarray
+    ) -> float:
+        # reward starts at 0
+        reward = 0
+
+        # need to account for attacking goal based on team
+        if player.team_num == BLUE_TEAM:
+            ball_position = state.ball.position
+            ball_vel = state.ball.linear_velocity
+        else:
+            ball_position = state.inverted_ball.position
+            ball_vel = state.inverted_ball.linear_velocity
+
+
+        # set wall_touch to true if touching ball while car is on wall
+        if player.ball_touched and player.on_ground and ball_position[2] >= self.min_wall_touch_height and abs(ball_position[1]) <= 3500 and self.num_steps < 15: # backboard is 5120
+            self.wall_touch = True
+            self.num_steps = self.num_steps + 1
+            reward = .1*((ball_position[2] - self.min_wall_touch_height)/self.max_height)**.5 # diminshing returns, increasing rewards for higher touches on wall
+
+        # add reward if hits ball off sidewall up into air towards goal. only true if already wall touch
+        if not self.off_sidewall and self.wall_touch and ball_vel[2] > 0 and ball_vel[1] > 0 and abs(ball_position[0]) < 4096 - BALL_RADIUS*2:
+            self.num_steps = 0
+            self.off_sidewall = True
+            reward = .25
+
+        # add reward if car off wall towards ball
+        if self.wall_touch and self.off_sidewall and not player.on_ground:
+            pos_diff = state.ball.position - player.car_data.position
+            vel_diff = state.ball.linear_velocity - player.car_data.linear_velocity
+            norm_pos_diff = np.linalg.norm(pos_diff)
+            norm_vel_diff = np.linalg.norm(vel_diff)
+
+            # reward as long as stays close to ball and with a similar velocity as ball
+            if norm_pos_diff < self.min_pos_diff and norm_vel_diff < self.min_vel_diff and self.num_steps < 30:
+                self.num_steps = self.num_steps + 1
+                self.towards_ball = True
+                reward = .1
+
+        # add reward if hits ball in air after pop
+        if not self.first_air_touch and self.wall_touch and self.off_sidewall and self.towards_ball and player.ball_touched and not player.on_ground and ball_position[2] >=  self.min_air_dribble_height:
+            self.first_air_touch = True
+            reward = reward + 1.5
+
+        # add reward for each following air touch
+        if self.wall_touch and self.off_sidewall and self.towards_ball and self.first_air_touch and  player.ball_touched and not player.on_ground and ball_position[2] >=  self.min_air_dribble_height:
+            self.second_air_touch = True
+            reward = max(2, reward + 1)
+
+
+        # add extra reward if ball going towards goal
+        if self.wall_touch and self.off_sidewall and self.towards_ball and self.second_air_touch:
+            if player.team_num == BLUE_TEAM:
+                objective = np.array(ORANGE_GOAL_BACK)
+            else:
+                objective = np.array(BLUE_GOAL_BACK)
+            vel = state.ball.linear_velocity
+            pos_diff = objective - state.ball.position
+            # Regular component velocity
+            norm_pos_diff = pos_diff / np.linalg.norm(pos_diff)
+            if np.linalg.norm(vel) > 0:
+                norm_vel = vel / np.linalg.norm(vel)
+            else:
+                norm_vel = vel
+            # only care about going towards back of net in x, y plane. z coordinate can vary.
+            dot = float(norm_pos_diff[0]*norm_vel[0] + norm_pos_diff[1]*norm_vel[1])
+            if dot > .75:
+                reward = reward + 1
+
+
+        # if ball hits ground, reset conditions and no reward
+        if ball_position[2] < self.min_wall_touch_height or self.num_steps > 5:
+            self.wall_touch = False
+            self.off_sidewall = False
+            self.towards_ball = False
+            self.first_air_touch = False
+            self.num_steps = 0
+            reward = 0
+ 
 
         return reward
 
