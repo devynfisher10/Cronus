@@ -92,6 +92,29 @@ class JumpTouchReward(RewardFunction):
         return 0
 
 
+class AerialReward(RewardFunction):
+    """Rewards every step car is in air and away from walls. Emergency reward to encourage getting unstuck from ground. Will remove / severely tone down once is getting jump touches."""
+    def __init__(self, min_height=25):
+        self.min_height = min_height
+        self.max_height = 2044-92.75
+        self.range = self.max_height - self.min_height
+        self.prev_has_flip = True
+
+    def reset(self, initial_state: GameState):
+        self.prev_has_flip = True
+
+    def get_reward(
+        self, player: PlayerData, state: GameState, previous_action: np.ndarray
+    ) -> float:
+        # reward if car off ground above min height and away from any walls
+        if not player.on_ground and player.car_data.position[2] >= self.min_height and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000 and self.prev_has_flip and not player.has_flip:
+            self.prev_has_flip = player.has_flip
+            return .5
+
+        self.prev_has_flip = player.has_flip
+        return 0
+
+
 class DoubleTapReward(RewardFunction):
     """Class to reward agent for behavior related to double taps. Agent gets reward if making air touch after ball hits backboard before the ball hits the ground"""
     def __init__(self):
@@ -259,7 +282,7 @@ class AirDribbleReward(RewardFunction):
         # add reward for each following air touch
         if self.wall_touch and self.off_sidewall and self.towards_ball and self.first_air_touch and  player.ball_touched and not player.on_ground and ball_position[2] >=  self.min_air_dribble_height:
             self.second_air_touch = True
-            reward = max(2, reward + 1)
+            reward = max(2, reward + 1.5)
 
 
         # add extra reward if ball going towards goal
