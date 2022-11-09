@@ -94,10 +94,9 @@ class JumpTouchReward(RewardFunction):
 
 class AerialReward(RewardFunction):
     """Rewards every step car is in air and away from walls. Emergency reward to encourage getting unstuck from ground. Will remove / severely tone down once is getting jump touches."""
-    def __init__(self, min_height=25):
+    def __init__(self, min_height=25): # from 25
         self.min_height = min_height
         self.max_height = 2044-92.75
-        self.range = self.max_height - self.min_height
         self.prev_has_flip = True
 
     def reset(self, initial_state: GameState):
@@ -107,7 +106,7 @@ class AerialReward(RewardFunction):
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
         # reward if car off ground above min height and away from any walls
-        if not player.on_ground and player.car_data.position[2] >= self.min_height and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000 and self.prev_has_flip and not player.has_flip:
+        if player.ball_touched and not player.on_ground and player.car_data.position[2] >= self.min_height and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000 and self.prev_has_flip and not player.has_flip:
             self.prev_has_flip = player.has_flip
             return .5
 
@@ -218,7 +217,7 @@ class AirDribbleReward(RewardFunction):
         self.second_air_touch = False
         self.min_wall_touch_height = 100
         self.min_air_dribble_height = 500 # top of goal is 642.775
-        self.min_pos_diff = 350
+        self.min_pos_diff = 300
         self.min_vel_diff = 400
         self.num_steps = 0
         self.max_height = 2044-92.75
@@ -272,7 +271,7 @@ class AirDribbleReward(RewardFunction):
             if norm_pos_diff < self.min_pos_diff and norm_vel_diff < self.min_vel_diff and self.num_steps < 30:
                 self.num_steps = self.num_steps + 1
                 self.towards_ball = True
-                reward = .1
+                reward = .25
 
         # add reward if hits ball in air after pop
         if not self.first_air_touch and self.wall_touch and self.off_sidewall and self.towards_ball and player.ball_touched and not player.on_ground and ball_position[2] >=  self.min_air_dribble_height:
