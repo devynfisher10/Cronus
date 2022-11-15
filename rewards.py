@@ -97,20 +97,24 @@ class AerialReward(RewardFunction):
     def __init__(self, min_height=25): # from 25
         self.min_height = min_height
         self.max_height = 2044-92.75
-        self.prev_has_flip = True
+        #self.prev_has_flip = True
 
     def reset(self, initial_state: GameState):
-        self.prev_has_flip = True
+        #self.prev_has_flip = True
+        pass
 
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
         # reward if car off ground above min height and away from any walls
-        if player.ball_touched and not player.on_ground and player.car_data.position[2] >= self.min_height and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000 and self.prev_has_flip and not player.has_flip:
-            self.prev_has_flip = player.has_flip
-            return .5
+        if not player.on_ground and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000: # and self.prev_has_flip and not player.has_flip:
+            #self.prev_has_flip = player.has_flip
+            if player.ball_touched:
+                return .1
+            else:
+                return .01
 
-        self.prev_has_flip = player.has_flip
+        #self.prev_has_flip = player.has_flip
         return 0
 
 
@@ -252,7 +256,7 @@ class AirDribbleReward(RewardFunction):
         if player.ball_touched and player.on_ground and ball_position[2] >= self.min_wall_touch_height and abs(ball_position[1]) <= 3500 and self.num_steps < 15: # backboard is 5120
             self.wall_touch = True
             self.num_steps = self.num_steps + 1
-            reward = .1*((ball_position[2] - self.min_wall_touch_height)/self.max_height)**.5 # diminshing returns, increasing rewards for higher touches on wall
+            reward = .05*((ball_position[2] - self.min_wall_touch_height)/self.max_height)**.5 # diminshing returns, increasing rewards for higher touches on wall, from .1 at 1.25
 
         # add reward if hits ball off sidewall up into air towards goal. only true if already wall touch
         if not self.off_sidewall and self.wall_touch and ball_vel[2] > 0 and ball_vel[1] > 0 and abs(ball_position[0]) < 4096 - BALL_RADIUS*2:

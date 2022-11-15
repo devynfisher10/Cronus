@@ -59,14 +59,14 @@ if __name__ == '__main__':  # Required for multiprocessing
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 5 # from 10 at 1.1B from 15 at 710 mil # from 9 at 550 mil # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
+        touch_vel_weight = 3 # from 5 at 1.4B from 10 at 1.1B from 15 at 710 mil # from 9 at 550 mil # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
         vel_ball_weight = .05
         vel_weight = .002 # from .001 # from .0025 from .02 # from .01 # from .025
         bad_turtle_weight = 0 # from .25 1.1B # from .5
-        jump_touch_weight = 8 # from 15 at 1.1B from 40 at 710 mil # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
+        jump_touch_weight = 5 # from 8 at 1.4B from 15 at 1.1B from 40 at 710 mil # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
         double_tap_weight = 1 # from .5
-        air_dribble_weight = .2 # from .5 1.1B from 1
-        aerial_weight = .25 # from 1
+        air_dribble_weight = .125 # from .2 at 1.4B from .5 1.1B from 1
+        aerial_weight = .15 # from 4 at 1.4B from 1 at 1.25B
         return Match(
             team_size=1,  # 1v1 bot only
             tick_skip=frame_skip,
