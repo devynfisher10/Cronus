@@ -52,7 +52,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
         goal_weight = 15 # from 10 at 550 mil
         demo_weight = 3 # from 4 at 610 mil
-        boost_weight = .25 # from .1 at 1B # from .025 at 550 mil # from 1 from 2
+        boost_weight = 1.5 #  from .25 at 1.5B from .1 at 1B # from .025 at 550 mil # from 1 from 2
         shot_weight = 0 # from .05 at 710 mil # from .25 at 610 mil # from.5 at 550 mil # from 1 at 400 mil
         touch_weight = 0 # from .1 over 1B # from .2 at 900 mil # from 1 at 610 mil # from 2 at 550 mil # from 2.5 at 400 mil from 4 at 300 mil # from 2 from 0
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         jump_touch_weight = 5 # from 8 at 1.4B from 15 at 1.1B from 40 at 710 mil # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
         double_tap_weight = 1 # from .5
         air_dribble_weight = .125 # from .2 at 1.4B from .5 1.1B from 1
-        aerial_weight = .15 # from 4 at 1.4B from 1 at 1.25B
+        aerial_weight = .5 # from 4 at 1.4B from 1 at 1.25B
         return Match(
             team_size=1,  # 1v1 bot only
             tick_skip=frame_skip,
