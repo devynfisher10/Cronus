@@ -7,7 +7,6 @@ from stable_baselines3.common.vec_env import VecMonitor, VecNormalize, VecCheckN
 from stable_baselines3.ppo import MlpPolicy
 
 
-#from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
 from rlgym.utils.obs_builders import AdvancedObs
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
 from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
@@ -16,14 +15,13 @@ from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
 from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogReward
 from rlgym.utils.reward_functions.common_rewards.ball_goal_rewards import VelocityBallToGoalReward
 from rlgym.utils.reward_functions.common_rewards.misc_rewards import EventReward, VelocityReward
-from rewards import TouchVelChange, BadTurtle,JumpTouchReward,DoubleTapReward, AirDribbleReward, AerialReward
+from rewards import TouchVelChange,JumpTouchReward,DoubleTapReward, AirDribbleReward, AerialReward
 
 
 
 # using Leaky Relu activation function
 from torch.nn import LeakyReLU
 
-from rewards import CronusRewards
 from state import CronusStateSetter
 from terminal import CronusTerminalCondition
 from sprinter_parser import LookupAction
@@ -35,13 +33,12 @@ if __name__ == '__main__':  # Required for multiprocessing
     # initial parameters, will update over the course of learning to increase batch size and comment iterations
     fps = 120 / frame_skip
     gamma = np.exp(np.log(0.5) / (fps * half_life_seconds))  
-    # for printing fast results instead of 1_000_000
+    # start steps at 500_000 instead of 1 mil for early learning speed, move to 1 mil later
     target_steps = 1_000_000
     agents_per_match = 2
     # 7 is number of instances that maximizes fps on my system
     num_instances=7
     steps = target_steps // (num_instances * agents_per_match) #making sure the experience counts line up properly
-    # v0.1 batch size = 10,000, v0.2 batch_size = 100,000 for fps gain
     batch_size = 100_000
     loading_model=True #check that loading model instead of starting from scratch
     model_to_load = "exit_save.zip" #exit_save.zip
@@ -50,39 +47,37 @@ if __name__ == '__main__':  # Required for multiprocessing
 
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
-        goal_weight = 15 # from 10 at 550 mil
-        demo_weight = 3 # from 4 at 610 mil
-        boost_weight = 1.5 #  from .25 at 1.5B from .1 at 1B # from .025 at 550 mil # from 1 from 2
-        shot_weight = 0 # from .05 at 710 mil # from .25 at 610 mil # from.5 at 550 mil # from 1 at 400 mil
-        touch_weight = 0 # from .1 over 1B # from .2 at 900 mil # from 1 at 610 mil # from 2 at 550 mil # from 2.5 at 400 mil from 4 at 300 mil # from 2 from 0
+        goal_weight = 15 # 
+        demo_weight = 3 # 
+        boost_weight = .05 # 
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 3 # from 5 at 1.4B from 10 at 1.1B from 15 at 710 mil # from 9 at 550 mil # from 6 at 400 mil from 3 at 300 mil # from .75 from .5
-        vel_ball_weight = .05
-        vel_weight = .002 # from .001 # from .0025 from .02 # from .01 # from .025
-        bad_turtle_weight = 0 # from .25 1.1B # from .5
-        jump_touch_weight = 5 # from 8 at 1.4B from 15 at 1.1B from 40 at 710 mil # from 20 at 550 mil # from 10 at 400 mil from .5 at 300 mil # from 0
-        double_tap_weight = 1 # from .5
-        air_dribble_weight = .125 # from .2 at 1.4B from .5 1.1B from 1
-        aerial_weight = .5 # from 4 at 1.4B from 1 at 1.25B
+        touch_vel_weight = 20 # 
+        vel_ball_weight = .5
+        vel_weight = .00005 # 
+        jump_touch_weight = 6 # 
+        double_tap_weight = 1 # 
+        air_dribble_weight = .1 # 
+        aerial_weight = .005 # 
+ 
+
         return Match(
             team_size=1,  # 1v1 bot only
             tick_skip=frame_skip,
             reward_function=SB3CombinedLogReward(
                 (
-                 EventReward(goal=goal_weight, concede=-goal_weight, demo=demo_weight, boost_pickup=boost_weight, shot=shot_weight, touch=touch_weight),  
+                 EventReward(goal=goal_weight, concede=-goal_weight, demo=demo_weight, boost_pickup=boost_weight),  
                  TouchVelChange(),
                  VelocityBallToGoalReward(),
                  VelocityReward(),
-                 BadTurtle(),
                  JumpTouchReward(),
                  DoubleTapReward(),
                  AirDribbleReward(),
                  AerialReward(),
                  ),
-                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, bad_turtle_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight),
+                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight),
                 "logs"
             ),
             spawn_opponents=True,
@@ -122,7 +117,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             env,
             n_epochs=10,                 # had to drop epochs for fps gain, v0.1=30, v0.2=10
             policy_kwargs=policy_kwargs,
-            learning_rate=5e-5,          
+            learning_rate=1e-4,          
             ent_coef=0.01,               # From PPO Atari
             vf_coef=1.,                  # From PPO Atari
             gamma=gamma,                 # Gamma as calculated using half-life
@@ -137,17 +132,14 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Save model every so often
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
-    # 100,000 for fast results instead of 500,000
-    #reward_list=['goal', 'concede', 'demo', 'boost', 'shot', 'touch', 'event', 'touch_vel', 'align','vel_ball','vel','bad_turtle','jump_touch','double_tap']
-    reward_list=['event', 'touch_vel','vel_ball','vel','bad_turtle','jump_touch','double_tap', 'air_dribble', 'aerial']
+    reward_list=['event', 'touch_vel','vel_ball','vel','jump_touch','double_tap', 'air_dribble', 'aerial']
 
-    save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model")
+    save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model_v2")
     reward_callback = SB3CombinedLogRewardCallback(reward_list, 'logs')
     callbacks = CallbackList([save_callback, reward_callback])
     try:
         while True:
-            model.learn(100_000_000, callback=callbacks, reset_num_timesteps=False, tb_log_name="PPO_1")
-            #model.learn(100_000_000, callback=save_callback, reset_num_timesteps=False, tb_log_name="PPO_1")
+            model.learn(100_000_000, callback=callbacks, reset_num_timesteps=False, tb_log_name="PPO_2")
 
             model.save("models/exit_save")
             model.save("mmr_models/" + str(model.num_timesteps))
@@ -158,4 +150,3 @@ if __name__ == '__main__':  # Required for multiprocessing
         print("Exiting training")
 
 
-        # C:\Users\devyn\anaconda3\Lib\site-packages

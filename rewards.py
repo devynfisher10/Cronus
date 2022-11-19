@@ -31,25 +31,6 @@ class TouchVelChange(RewardFunction):
         return reward
 
 
-class MaintainVel(RewardFunction):
-    """Reward for maintaining car's velocity"""
-    def __init__(self):
-        self.last_vel = np.zeros(3)
-
-    def reset(self, initial_state: GameState):
-        self.last_vel = np.zeros(3)
-
-    def get_reward(
-        self, player: PlayerData, state: GameState, previous_action: np.ndarray
-    ) -> float:
-
-        vel_difference = abs(np.linalg.norm(self.last_vel - player.car_data.linear_velocity))
-        # reward is negative, because value is larger if big change in velocity
-        reward = -1.0*vel_difference / CAR_MAX_SPEED
-
-        self.last_vel = player.car_data.linear_velocity
-
-        return reward
 
 class BadTurtle(RewardFunction):
     """Negative reward for being on the ground on a part of the car that is not the wheels"""
@@ -109,13 +90,38 @@ class AerialReward(RewardFunction):
         # reward if car off ground above min height and away from any walls
         if not player.on_ground and abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000: # and self.prev_has_flip and not player.has_flip:
             #self.prev_has_flip = player.has_flip
-            if player.ball_touched:
-                return .1
-            else:
-                return .01
+            #if player.ball_touched:
+            #    return .2
+            #else:
+                
+            return .01
 
         #self.prev_has_flip = player.has_flip
         return 0
+
+
+class FlipToBallReward(RewardFunction):
+    """Rewards car flipping closer to ball"""
+    def __init__(self, min_height=25): # from 25
+        self.prev_has_flip = True
+        self.prev_dist_to_ball = 0
+
+    def reset(self, initial_state: GameState):
+        self.prev_has_flip = True
+        self.prev_dist_to_ball = 0
+
+
+    def get_reward(
+        self, player: PlayerData, state: GameState, previous_action: np.ndarray
+    ) -> float:
+        dist_to_ball = np.linalg.norm(state.ball.position - player.car_data.position)
+        reward = 0
+        if abs(player.car_data.position[1]) <= 4000 and abs(player.car_data.position[0]) <= 3000 and self.prev_has_flip and not player.has_flip and dist_to_ball < self.prev_dist_to_ball:
+            reward = 1
+
+        self.prev_has_flip = player.has_flip
+        self.prev_dist_to_ball = dist_to_ball
+        return reward
 
 
 class DoubleTapReward(RewardFunction):
@@ -321,47 +327,3 @@ class AirDribbleReward(RewardFunction):
         return reward
 
 
-class CronusRewards(RewardFunction):
-    def __init__(self):
-        super().__init__()
-        # defining initial event reward weights, will update over time for curriculum learning and comment iterations
-        # v0.1
-        self.goal_weight = 10
-        self.demo_weight = 4
-        self.boost_weight = .025 # from 1 from 2
-        self.shot_weight=1
-        self.touch_weight = 4 # from 2 from 0
-
-        # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
-        # v0.1
-        self.event_weight = 1
-        self.touch_vel_weight = .75 # from .5
-        self.align_weight = 0 # from.25 around 60 mil steps 
-        self.vel_ball_weight = .05
-        self.vel_weight = .0025 # from.02 # from .01 # from .025
-        self.maintain_vel_weight = 0 # from .015 # from .1 from .025
-        self.bad_turtle_weight = .25 # from .5
-        self.jump_touch_weight = .5 # from 0
-        self.double_tap_weight = 1 # from .5
-
-        self.reward = SB3CombinedLogReward(
-            (
-             EventReward(goal=self.goal_weight, concede=-self.goal_weight, demo=self.demo_weight, boost_pickup=self.boost_weight, shot=self.shot_weight, touch=self.touch_weight),  
-             TouchVelChange(),
-             AlignBallGoal(),
-             VelocityBallToGoalReward(),
-             VelocityReward(),
-             BadTurtle(),
-             JumpTouchReward(),
-             DoubleTapReward()
-
-             ),
-            (self.event_weight, self.touch_vel_weight, self.align_weight, self.vel_ball_weight, self.vel_weight, self.bad_turtle_weight, self.jump_touch_weight, self.double_tap_weight),
-            "logs"
-        )
-
-    def reset(self, initial_state: GameState) -> None:
-        self.reward.reset(initial_state)
-
-    def get_reward(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> float:
-        return self.reward.get_reward(player, state, previous_action)
