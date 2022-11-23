@@ -15,6 +15,7 @@ from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
 from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogReward
 from rlgym.utils.reward_functions.common_rewards.ball_goal_rewards import VelocityBallToGoalReward
 from rlgym.utils.reward_functions.common_rewards.misc_rewards import EventReward, VelocityReward
+from rlgym.utils.reward_functions.common_rewards.player_ball_rewards import LiuDistancePlayerToBallReward
 from rewards import TouchVelChange,JumpTouchReward,DoubleTapReward, AirDribbleReward, AerialReward
 
 
@@ -47,20 +48,21 @@ if __name__ == '__main__':  # Required for multiprocessing
 
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
-        goal_weight = 15 # 
+        goal_weight = 10 # 
         demo_weight = 3 # 
         boost_weight = .05 # 
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 20 # 
-        vel_ball_weight = .5
+        touch_vel_weight = 50 # 
+        vel_ball_weight = 1
         vel_weight = .00005 # 
         jump_touch_weight = 6 # 
         double_tap_weight = 1 # 
         air_dribble_weight = .1 # 
         aerial_weight = .005 # 
+        dist_to_ball_weight = .0001
  
 
         return Match(
@@ -76,8 +78,9 @@ if __name__ == '__main__':  # Required for multiprocessing
                  DoubleTapReward(),
                  AirDribbleReward(),
                  AerialReward(),
+                 LiuDistancePlayerToBallReward(),
                  ),
-                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight),
+                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight, dist_to_ball_weight),
                 "logs"
             ),
             spawn_opponents=True,
@@ -117,7 +120,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             env,
             n_epochs=10,                 # had to drop epochs for fps gain, v0.1=30, v0.2=10
             policy_kwargs=policy_kwargs,
-            learning_rate=1e-4,          
+            learning_rate=5e-5,          
             ent_coef=0.01,               # From PPO Atari
             vf_coef=1.,                  # From PPO Atari
             gamma=gamma,                 # Gamma as calculated using half-life
@@ -132,7 +135,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Save model every so often
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
-    reward_list=['event', 'touch_vel','vel_ball','vel','jump_touch','double_tap', 'air_dribble', 'aerial']
+    reward_list=['event', 'touch_vel','vel_ball','vel','jump_touch','double_tap', 'air_dribble', 'aerial', 'dist_to_ball']
 
     save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model_v2")
     reward_callback = SB3CombinedLogRewardCallback(reward_list, 'logs')
