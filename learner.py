@@ -42,7 +42,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     steps = target_steps // (num_instances * agents_per_match) #making sure the experience counts line up properly
     batch_size = 100_000
     loading_model=True #check that loading model instead of starting from scratch
-    model_to_load = "exit_save.zip" #exit_save.zip
+    model_to_load = "exit_save.zip" #exit_save.zip rl_model_281069544_steps
     print(f"fps={fps}, gamma={gamma})")
 
 
@@ -55,14 +55,14 @@ if __name__ == '__main__':  # Required for multiprocessing
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 50 # 
-        vel_ball_weight = 1
-        vel_weight = .00005 # 
-        jump_touch_weight = 6 # 
+        touch_vel_weight = 15 # from 18 at 450 mil
+        vel_ball_weight = 2
+        vel_weight = .00025 # from .00005 at 450 mil
+        jump_touch_weight = 40 # from 9 at 450 mil
         double_tap_weight = 1 # 
         air_dribble_weight = .1 # 
-        aerial_weight = .005 # 
-        dist_to_ball_weight = .0001
+        aerial_weight = .05 # from .008 at 450 mil
+        dist_to_ball_weight = .001
  
 
         return Match(
@@ -124,6 +124,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             ent_coef=0.01,               # From PPO Atari
             vf_coef=1.,                  # From PPO Atari
             gamma=gamma,                 # Gamma as calculated using half-life
+            clip_range=0.2,
             verbose=3,                   # Print out all the info as we're going
             batch_size=batch_size,             
             n_steps=steps,                # Number of steps to perform before optimizing network
@@ -142,7 +143,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     callbacks = CallbackList([save_callback, reward_callback])
     try:
         while True:
-            model.learn(100_000_000, callback=callbacks, reset_num_timesteps=False, tb_log_name="PPO_2")
+            model.learn(100_000_000, callback=callbacks, reset_num_timesteps=False, tb_log_name="PPO_2_1")
 
             model.save("models/exit_save")
             model.save("mmr_models/" + str(model.num_timesteps))
