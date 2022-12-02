@@ -55,14 +55,14 @@ if __name__ == '__main__':  # Required for multiprocessing
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 15 # from 18 at 450 mil
-        vel_ball_weight = 2
-        vel_weight = .00025 # from .00005 at 450 mil
-        jump_touch_weight = 40 # from 9 at 450 mil
+        touch_vel_weight = 9 # from 15 at 550 mil from 18 at 450 mil
+        vel_ball_weight = 3 # from 2 at 450 mil
+        vel_weight = .003 # from .001 at 550 mil from .00005 at 450 mil
+        jump_touch_weight = 40 # from 40 at 550 mil from 9 at 450 mil
         double_tap_weight = 1 # 
         air_dribble_weight = .1 # 
-        aerial_weight = .05 # from .008 at 450 mil
-        dist_to_ball_weight = .001
+        aerial_weight = .2 # from .1 at 700 mil from .008 at 450 mil
+        dist_to_ball_weight = 0 # from .001 at 450 mil
  
 
         return Match(
@@ -74,7 +74,7 @@ if __name__ == '__main__':  # Required for multiprocessing
                  TouchVelChange(),
                  VelocityBallToGoalReward(),
                  VelocityReward(),
-                 JumpTouchReward(),
+                 JumpTouchReward(min_height=0),
                  DoubleTapReward(),
                  AirDribbleReward(),
                  AerialReward(),

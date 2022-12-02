@@ -68,7 +68,8 @@ class JumpTouchReward(RewardFunction):
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
         if player.ball_touched and not player.on_ground and state.ball.position[2] >= self.min_height:
-            return (state.ball.position[2] - self.min_height) / self.range
+            # adding const min to reward
+            return 0.02 + (state.ball.position[2] - self.min_height) / self.range
 
         return 0
 
