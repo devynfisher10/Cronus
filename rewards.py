@@ -17,7 +17,7 @@ class TouchVelChange(RewardFunction):
 
     def reset(self, initial_state: GameState):
         self.last_vel = np.zeros(3)
-
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -39,7 +39,7 @@ class BadTurtle(RewardFunction):
 
     def reset(self, initial_state: GameState):
         pass
-
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -63,7 +63,7 @@ class JumpTouchReward(RewardFunction):
 
     def reset(self, initial_state: GameState):
         pass
-
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -84,7 +84,7 @@ class AerialReward(RewardFunction):
     def reset(self, initial_state: GameState):
         #self.prev_has_flip = True
         pass
-
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -101,6 +101,23 @@ class AerialReward(RewardFunction):
         return 0
 
 
+class ZVelocity(RewardFunction):
+    """Rewards car for having positive z velocity while ball above them and close to them"""
+    def __init__(self, min_height_diff=BALL_RADIUS): 
+        self.min_height_diff=min_height_diff
+
+    def reset(self, initial_state: GameState):
+        pass
+    
+    def get_reward(
+        self, player: PlayerData, state: GameState, previous_action: np.ndarray
+    ) -> float:
+        # reward if car z pos below ball position accounting for ball radius, when x and y pos diff not too big
+        if  not player.on_ground and (player.car_data.position[2] < state.ball.position[2] - self.min_height_diff) and (abs(player.car_data.position[0] - state.ball.position[0]) < 500) and (abs(player.car_data.position[1] - state.ball.position[1]) < 500): 
+            return player.car_data.linear_velocity[2] / CAR_MAX_SPEED
+        return 0
+
+
 class FlipToBallReward(RewardFunction):
     """Rewards car flipping closer to ball"""
     def __init__(self, min_height=25): # from 25
@@ -111,7 +128,7 @@ class FlipToBallReward(RewardFunction):
         self.prev_has_flip = True
         self.prev_dist_to_ball = 0
 
-
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -145,6 +162,7 @@ class DoubleTapReward(RewardFunction):
         self.num_steps = 0
         self.prev_ball_vel = np.zeros(3)
 
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -244,6 +262,7 @@ class AirDribbleReward(RewardFunction):
         self.num_steps = 0
         self.num_steps = 0
 
+    
     def get_reward(
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
@@ -328,3 +347,46 @@ class AirDribbleReward(RewardFunction):
         return reward
 
 
+class GoalSpeedAndPlacementReward(RewardFunction):
+    def __init__(self):
+        self.prev_score_blue = 0
+        self.prev_score_orange = 0
+        self.prev_state_blue = GameState(None)
+        self.prev_state_orange = GameState(None)
+        self.min_height = BALL_RADIUS + 10
+        self.height_reward = 1.25
+
+    def reset(self, initial_state: GameState):
+        self.prev_score_blue = initial_state.blue_score
+        self.prev_score_orange = initial_state.orange_score
+        self.prev_state_blue = initial_state
+        self.prev_state_orange = initial_state
+
+    
+    def get_reward(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> float:
+        if player.team_num == BLUE_TEAM:
+            score = state.blue_score
+            # check to see if goal scored
+            if score > self.prev_score_blue:
+                reward = np.linalg.norm(self.prev_state_blue.ball.linear_velocity) / BALL_MAX_SPEED
+                if self.prev_state_blue.ball.position[2] > self.min_height:
+                    reward = self.height_reward * reward
+                self.prev_state_blue = state
+                self.prev_score_blue = score
+                return reward
+            else:
+                self.prev_state_blue = state
+                return 0.0
+        else:
+            score = state.orange_score
+            # check to see if goal scored
+            if score > self.prev_score_orange:
+                reward = np.linalg.norm(self.prev_state_orange.ball.linear_velocity) / BALL_MAX_SPEED
+                if self.prev_state_orange.ball.position[2] > self.min_height:
+                    reward = self.height_reward * reward
+                self.prev_state_orange = state
+                self.prev_score_orange = score
+                return reward
+            else:
+                self.prev_state_orange = state
+                return 0.0
