@@ -15,7 +15,6 @@ from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogRewardCallback
 from rlgym_tools.sb3_utils.sb3_log_reward import SB3CombinedLogReward
 from rlgym.utils.reward_functions.common_rewards.ball_goal_rewards import VelocityBallToGoalReward
 from rlgym.utils.reward_functions.common_rewards.misc_rewards import EventReward, VelocityReward
-from rlgym.utils.reward_functions.common_rewards.player_ball_rewards import LiuDistancePlayerToBallReward
 from rlgym_tools.extra_rewards.kickoff_reward import KickoffReward
 from rewards import TouchVelChange,JumpTouchReward,DoubleTapReward, AirDribbleReward, AerialReward, GoalSpeedAndPlacementReward, ZVelocity
 
@@ -56,15 +55,14 @@ if __name__ == '__main__':  # Required for multiprocessing
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1
-        touch_vel_weight = 9 # from 15 at 550 mil from 18 at 450 mil
+        touch_vel_weight = 6 # from 9 at 1.6B from 15 at 550 mil from 18 at 450 mil
         vel_ball_weight = 2 # from3 at 920 mil from 2 at 450 mil
         vel_weight = .003 # from .001 at 550 mil from .00005 at 450 mil
-        jump_touch_weight = 60 # from 40 at 550 mil from 9 at 450 mil
+        jump_touch_weight = 30 # from 20 at 1.6B from 40 at 1.25B from 60 at 1.2B from 40 at 550 mil from 9 at 450 mil
         double_tap_weight = 1 # 
-        air_dribble_weight = .2 # from .1 at 920 mil
-        aerial_weight = .4 # from .2 at 920 mil from .1 at 700 mil from .008 at 450 mil
-        dist_to_ball_weight = 0 # from .001 at 450 mil
-        goal_speed_weight = 5
+        air_dribble_weight = .6 # from .4 at 1.6B from .2 at 1.2B from .1 at 920 mil
+        aerial_weight = .2 # from .4 at 1.25B # from .2 at 920 mil from .1 at 700 mil from .008 at 450 mil
+        goal_speed_weight = 10 #from 5 at 1.25B
         kickoff_weight = .5
         z_vel_weight = .2
  
@@ -78,16 +76,15 @@ if __name__ == '__main__':  # Required for multiprocessing
                  TouchVelChange(),
                  VelocityBallToGoalReward(),
                  VelocityReward(),
-                 JumpTouchReward(min_height=0),
+                 JumpTouchReward(min_height=92.75), # from 0 at 1.25B
                  DoubleTapReward(),
                  AirDribbleReward(),
                  AerialReward(),
-                 LiuDistancePlayerToBallReward(),
                  GoalSpeedAndPlacementReward(),
                  ZVelocity(),
                  KickoffReward(),
                  ),
-                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight, dist_to_ball_weight, goal_speed_weight, kickoff_weight, z_vel_weight),
+                (event_weight, touch_vel_weight, vel_ball_weight, vel_weight, jump_touch_weight, double_tap_weight, air_dribble_weight, aerial_weight, goal_speed_weight, kickoff_weight, z_vel_weight),
                 "logs"
             ),
             spawn_opponents=True,
@@ -143,7 +140,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     # Save model every so often
     # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
     # This saves to specified folder with a specified name
-    reward_list=['event', 'touch_vel','vel_ball','vel','jump_touch','double_tap', 'air_dribble', 'aerial', 'dist_to_ball', 'goal_speed_and_placement', 'kickoff', 'z_vel']
+    reward_list=['event', 'touch_vel','vel_ball','vel','jump_touch','double_tap', 'air_dribble', 'aerial', 'goal_speed_and_placement', 'kickoff', 'z_vel']
 
     save_callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="models", name_prefix="rl_model_v2")
     reward_callback = SB3CombinedLogRewardCallback(reward_list, 'logs')

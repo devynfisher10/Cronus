@@ -68,8 +68,8 @@ class JumpTouchReward(RewardFunction):
         self, player: PlayerData, state: GameState, previous_action: np.ndarray
     ) -> float:
         if player.ball_touched and not player.on_ground and state.ball.position[2] >= self.min_height:
-            # adding const min to reward
-            return 0.02 + (state.ball.position[2] - self.min_height) / self.range
+            # adding const min to reward, from .02 at 1.2B
+            return (state.ball.position[2] - self.min_height) / self.range
 
         return 0
 
@@ -282,7 +282,7 @@ class AirDribbleReward(RewardFunction):
         if player.ball_touched and player.on_ground and ball_position[2] >= self.min_wall_touch_height and abs(ball_position[1]) <= 3500 and self.num_steps < 15: # backboard is 5120
             self.wall_touch = True
             self.num_steps = self.num_steps + 1
-            reward = .05*((ball_position[2] - self.min_wall_touch_height)/self.max_height)**.5 # diminshing returns, increasing rewards for higher touches on wall, from .1 at 1.25
+            reward = .1*((ball_position[2] - self.min_wall_touch_height)/self.max_height)**.5 # diminshing returns, increasing rewards for higher touches on wall, from .1 at 1.25
 
         # add reward if hits ball off sidewall up into air towards goal. only true if already wall touch
         if not self.off_sidewall and self.wall_touch and ball_vel[2] > 0 and ball_vel[1] > 0 and abs(ball_position[0]) < 4096 - BALL_RADIUS*2:
@@ -354,7 +354,7 @@ class GoalSpeedAndPlacementReward(RewardFunction):
         self.prev_state_blue = GameState(None)
         self.prev_state_orange = GameState(None)
         self.min_height = BALL_RADIUS + 10
-        self.height_reward = 1.25
+        self.height_reward = 1.75
 
     def reset(self, initial_state: GameState):
         self.prev_score_blue = initial_state.blue_score
