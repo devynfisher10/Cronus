@@ -50,21 +50,21 @@ if __name__ == '__main__':  # Required for multiprocessing
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
         goal_weight = 10 # 
         demo_weight = 3 # 
-        boost_weight = .05 # 
+        boost_weight = .1 # from .05 at 1.9B
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
-        event_weight = 1
+        event_weight = 1 
         touch_vel_weight = 6 # from 9 at 1.6B from 15 at 550 mil from 18 at 450 mil
         vel_ball_weight = 2 # from3 at 920 mil from 2 at 450 mil
-        vel_weight = .003 # from .001 at 550 mil from .00005 at 450 mil
+        vel_weight = .004 # from .003 at 1.9B from .001 at 550 mil from .00005 at 450 mil
         jump_touch_weight = 30 # from 20 at 1.6B from 40 at 1.25B from 60 at 1.2B from 40 at 550 mil from 9 at 450 mil
         double_tap_weight = 1 # 
         air_dribble_weight = .6 # from .4 at 1.6B from .2 at 1.2B from .1 at 920 mil
-        aerial_weight = .2 # from .4 at 1.25B # from .2 at 920 mil from .1 at 700 mil from .008 at 450 mil
+        aerial_weight = .1 # from .2 at 1.9B at from .4 at 1.25B # from .2 at 920 mil from .1 at 700 mil from .008 at 450 mil
         goal_speed_weight = 10 #from 5 at 1.25B
         kickoff_weight = .5
-        z_vel_weight = .2
+        z_vel_weight = .05 # from .2 at 1.9B
  
 
         return Match(
