@@ -38,11 +38,11 @@ if __name__ == '__main__':  # Required for multiprocessing
     target_steps = 1_000_000
     agents_per_match = 2
     # 7 is number of instances that maximizes fps on my system
-    num_instances=7
+    num_instances=5
     steps = target_steps // (num_instances * agents_per_match) #making sure the experience counts line up properly
     batch_size = 100_000
     loading_model=True #check that loading model instead of starting from scratch
-    model_to_load = "exit_save.zip" #exit_save.zip rl_model_281069544_steps
+    model_to_load = "rl_model_v2_2716325694_steps.zip" #exit_save.zip rl_model_281069544_steps
     print(f"fps={fps}, gamma={gamma})")
 
 
@@ -50,17 +50,17 @@ if __name__ == '__main__':  # Required for multiprocessing
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
         goal_weight = 10 # 
         demo_weight = 3 # 
-        boost_weight = .1 # from .05 at 1.9B
+        boost_weight = .3 # from .1 at 2.6B from .05 at 1.9B
 
         # defining initial custom reward weights, will update over time for curriculum learning and comment iterations
         # v0.1
         event_weight = 1 
         touch_vel_weight = 6 # from 9 at 1.6B from 15 at 550 mil from 18 at 450 mil
-        vel_ball_weight = 3 # from 2 at 2B from3 at 920 mil from 2 at 450 mil
+        vel_ball_weight = 2 # from 3 at 2.6B from 2 at 2B from3 at 920 mil from 2 at 450 mil
         vel_weight = .007 # from .004 at 2B from .003 at 1.9B from .001 at 550 mil from .00005 at 450 mil
-        jump_touch_weight = 18 # from 30 at 2B from 20 at 1.6B from 40 at 1.25B from 60 at 1.2B from 40 at 550 mil from 9 at 450 mil
+        jump_touch_weight = 25 # from 18 at 2.6B from 30 at 2B from 20 at 1.6B from 40 at 1.25B from 60 at 1.2B from 40 at 550 mil from 9 at 450 mil
         double_tap_weight = 1 # 
-        air_dribble_weight = 1 # from .6 at 2B from .4 at 1.6B from .2 at 1.2B from .1 at 920 mil
+        air_dribble_weight = 2 # from 1 at 2.6B from .6 at 2B from .4 at 1.6B from .2 at 1.2B from .1 at 920 mil
         aerial_weight = .1 # from .2 at 1.9B at from .4 at 1.25B # from .2 at 920 mil from .1 at 700 mil from .008 at 450 mil
         goal_speed_weight = 10 #from 5 at 1.25B
         kickoff_weight = .5 
@@ -92,7 +92,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         )
 
     # creating env and force paging 
-    env = SB3MultipleInstanceEnv(get_match, num_instances, wait_time=80, force_paging=True)            
+    env = SB3MultipleInstanceEnv(get_match, num_instances, wait_time=70, force_paging=True)            
     env = VecCheckNan(env)                                # Optional
     env = VecMonitor(env)                                 # Recommended, logs mean reward and ep_len to Tensorboard
     env = VecNormalize(env, norm_obs=False, gamma=gamma)  # Highly recommended, normalizes rewards
@@ -103,7 +103,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         model=PPO.load(
             f"models/{model_to_load}",
             env,
-            device="cpu",
+            device="auto",
             custom_objects={"n_envs": env.num_envs}, #automatically adjusts to users changing instance count, may encounter shaping error otherwise
             )
         print("loaded model")
@@ -119,7 +119,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         model = PPO(
             MlpPolicy,
             env,
-            n_epochs=10,                 # had to drop epochs for fps gain, v0.1=30, v0.2=10
+            n_epochs=30,                 # had to drop epochs for fps gain, v0.1=30, v0.2=10
             policy_kwargs=policy_kwargs,
             learning_rate=5e-5,          
             ent_coef=0.01,               # From PPO Atari
@@ -130,7 +130,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             batch_size=batch_size,             
             n_steps=steps,                # Number of steps to perform before optimizing network
             tensorboard_log="logs",  # `tensorboard --logdir out/logs` in terminal to see graphs
-            device="cpu",           # Uses GPU if available
+            device="auto",           # Uses GPU if available
         )
     print("running")
 
